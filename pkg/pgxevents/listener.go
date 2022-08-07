@@ -24,7 +24,11 @@ const (
 	defaultMaxRetries = 0
 )
 
-func NewListener(ctx context.Context, pool *pgxpool.Pool, opts ...Option) (*pgxListener, error) {
+type Listener interface {
+	Listen(string) (chan *Event, error)
+}
+
+func NewListener(ctx context.Context, pool *pgxpool.Pool, opts ...Option) (Listener, error) {
 	l := pgxListener{
 		ctx:        ctx,
 		pool:       pool,
