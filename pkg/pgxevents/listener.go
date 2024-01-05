@@ -3,7 +3,7 @@ package pgxevents
 import (
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"sync"
 	"time"
 )

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ypopivniak/pgxevents/pkg/pgxevents"
 	"log"
 	"os"
@@ -18,7 +18,7 @@ type Record struct {
 func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
 
-	pool, err := pgxpool.Connect(ctx, "postgres://postgres:postgres@localhost:5432/postgres")
+	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/postgres")
 	if err != nil {
 		log.Fatal(err)
 	}
