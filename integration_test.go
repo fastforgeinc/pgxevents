@@ -114,7 +114,7 @@ func TestIntegrationTriggerFiresOnInsertUpdateDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewListener: %v", err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	sub, err := ListenTyped[testRow](listener, table)
 	if err != nil {
@@ -170,7 +170,7 @@ func TestIntegrationLargeRowDeliveredViaOutbox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	type largeRow struct {
 		ID      string         `json:"id"`
@@ -229,7 +229,7 @@ func TestIntegrationValidateMissingTrigger(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	if _, err = listener.Listen(table); err == nil {
 		t.Fatal("expected error for table without trigger")
@@ -250,7 +250,7 @@ func TestIntegrationRuntimeInstallBootstraps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewListener with WithRuntimeInstall(true): %v", err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	sub, err := ListenTyped[testRow](listener, table)
 	if err != nil {
@@ -274,7 +274,7 @@ func TestIntegrationHealthSignalOnStartup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	select {
 	case h := <-listener.Health():
@@ -302,7 +302,7 @@ func TestIntegrationCleanupDeletesExpiredRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	sub, err := ListenTyped[testRow](listener, table)
 	if err != nil {
@@ -340,7 +340,7 @@ func TestIntegrationOverflowDisconnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	// Untyped Listen so we can hold the channel without consuming it; the
 	// typed wrapper would forward eagerly via its decoder goroutine.

@@ -61,7 +61,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("new listener: %v", err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	sub, err := pgxevents.ListenTyped[Note](listener, "notes")
 	if err != nil {
