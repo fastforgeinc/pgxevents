@@ -92,8 +92,24 @@ func NewListener(parent context.Context, pool *pgxpool.Pool, opts ...Option) (Li
 		}
 	}
 
+	// Establish the initial LISTEN synchronously so callers can rely on
+	// notifications being captured as soon as NewListener returns.
+	initialConn, err := pool.Acquire(ctx)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("pgxevents: acquire LISTEN connection: %w", err)
+	}
+	if _, err := initialConn.Exec(ctx, "LISTEN "+NotifyChannel); err != nil {
+		initialConn.Release()
+		cancel()
+		return nil, fmt.Errorf("pgxevents: LISTEN: %w", err)
+	}
+
+	cfg.metrics.ListenerUp()
+	l.emitHealth(nil)
+
 	l.wg.Add(2)
-	go func() { defer l.wg.Done(); l.listenLoop() }()
+	go func() { defer l.wg.Done(); l.listenLoop(initialConn) }()
 	go func() { defer l.wg.Done(); l.cleanupLoop() }()
 
 	return l, nil

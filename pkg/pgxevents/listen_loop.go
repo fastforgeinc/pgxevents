@@ -8,30 +8,29 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// listenLoop runs as a background goroutine, maintaining the LISTEN
-// connection and dispatching notifications until the listener is closed.
-func (l *listener) listenLoop() {
-	delay := l.cfg.backoff.InitialDelay
+// listenLoop runs as a background goroutine, dispatching notifications
+// from initialConn until it errors, then reconnecting with exponential
+// backoff until the listener is closed.
+func (l *listener) listenLoop(initialConn *pgxpool.Conn) {
+	// Drive the first iteration with the connection acquired during
+	// NewListener so callers don't miss notifications between
+	// NewListener returning and the listen loop establishing LISTEN.
+	if err := l.runConn(initialConn); err != nil {
+		if l.ctx.Err() != nil {
+			return
+		}
+		l.handleListenError(err)
+	}
 
+	delay := l.cfg.backoff.InitialDelay
 	for {
 		if l.ctx.Err() != nil {
 			return
 		}
 
-		err := l.listenOnce()
-		if errors.Is(err, context.Canceled) || l.ctx.Err() != nil {
-			return
-		}
-		if err != nil {
-			l.cfg.logger.Warn("pgxevents: listener error", "error", err)
-			l.cfg.metrics.Reconnect(err)
-			l.cfg.metrics.ListenerDown(err)
-			l.emitHealth(err)
-		}
-
-		// Backoff before reconnect.
 		sleep := jitter(delay, l.cfg.backoff.Jitter)
 		select {
 		case <-l.ctx.Done():
@@ -39,26 +38,41 @@ func (l *listener) listenLoop() {
 		case <-time.After(sleep):
 		}
 		delay = nextBackoff(delay, l.cfg.backoff.MaxDelay)
+
+		conn, err := l.pool.Acquire(l.ctx)
+		if err != nil {
+			if l.ctx.Err() != nil {
+				return
+			}
+			l.handleListenError(fmt.Errorf("acquire connection: %w", err))
+			continue
+		}
+		if _, err := conn.Exec(l.ctx, "LISTEN "+NotifyChannel); err != nil {
+			conn.Release()
+			if l.ctx.Err() != nil {
+				return
+			}
+			l.handleListenError(fmt.Errorf("LISTEN: %w", err))
+			continue
+		}
+
+		l.cfg.metrics.ListenerUp()
+		l.emitHealth(nil)
+		delay = l.cfg.backoff.InitialDelay
+
+		if err := l.runConn(conn); err != nil {
+			if l.ctx.Err() != nil {
+				return
+			}
+			l.handleListenError(err)
+		}
 	}
 }
 
-// listenOnce acquires a connection, runs LISTEN, and reads notifications
-// until an error occurs or the context is cancelled. Returns the error
-// that ended the connection.
-func (l *listener) listenOnce() error {
-	conn, err := l.pool.Acquire(l.ctx)
-	if err != nil {
-		return fmt.Errorf("acquire connection: %w", err)
-	}
+// runConn reads notifications from conn until an error occurs or the
+// listener context is cancelled. Always releases conn before returning.
+func (l *listener) runConn(conn *pgxpool.Conn) error {
 	defer conn.Release()
-
-	if _, err := conn.Exec(l.ctx, "LISTEN "+NotifyChannel); err != nil {
-		return fmt.Errorf("LISTEN: %w", err)
-	}
-
-	l.cfg.metrics.ListenerUp()
-	l.emitHealth(nil)
-
 	for {
 		notif, err := conn.Conn().WaitForNotification(l.ctx)
 		if err != nil {
@@ -69,6 +83,18 @@ func (l *listener) listenOnce() error {
 		}
 		l.handleNotification(notif.Payload)
 	}
+}
+
+// handleListenError logs and emits metrics/health for a transient
+// listener-loop error.
+func (l *listener) handleListenError(err error) {
+	if errors.Is(err, context.Canceled) {
+		return
+	}
+	l.cfg.logger.Warn("pgxevents: listener error", "error", err)
+	l.cfg.metrics.Reconnect(err)
+	l.cfg.metrics.ListenerDown(err)
+	l.emitHealth(err)
 }
 
 // handleNotification fetches the outbox snapshot referenced by outboxID
