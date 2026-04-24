@@ -1,16 +1,19 @@
 package pgxevents
 
+// Action identifies the kind of mutation that produced an event. Values
+// correspond to PostgreSQL's TG_OP trigger variable.
 type Action string
 
 const (
-	Insert Action = "INSERT"
-	Update Action = "UPDATE"
-	Delete Action = "DELETE"
+	ActionInsert Action = "INSERT"
+	ActionUpdate Action = "UPDATE"
+	ActionDelete Action = "DELETE"
 )
 
+// IsValid reports whether a is one of the defined Action constants.
 func (a Action) IsValid() bool {
 	switch a {
-	case Insert, Update, Delete:
+	case ActionInsert, ActionUpdate, ActionDelete:
 		return true
 	}
 	return false
