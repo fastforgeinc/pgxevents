@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fastforgeinc/pgxevents/pkg/pgxevents"
+	"github.com/fastforgeinc/pgxevents"
 )
 
 // Note matches the demo table schema.

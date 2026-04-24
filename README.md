@@ -29,7 +29,7 @@ The outbox is `UNLOGGED` by default; durability across PG crashes isn't required
 ## Installation
 
 ```
-go get github.com/fastforgeinc/pgxevents/pkg/pgxevents@latest
+go get github.com/fastforgeinc/pgxevents@latest
 ```
 
 ## Quick start
@@ -59,7 +59,7 @@ This installs `pgxevents_<table>_trigger` `AFTER INSERT OR UPDATE OR DELETE`.
 ### 2. Subscribe in your service
 
 ```go
-import "github.com/fastforgeinc/pgxevents/pkg/pgxevents"
+import "github.com/fastforgeinc/pgxevents"
 
 pool, _ := pgxpool.New(ctx, dsn)
 
