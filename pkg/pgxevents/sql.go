@@ -8,7 +8,7 @@ import (
 // Version is the library version stamped into the installed trigger
 // function. NewListener validates at startup that the installed function
 // matches this version; mismatches fail fast with an actionable error.
-const Version = "0.1.0-scaffold"
+const Version = "1.0.0"
 
 // NotifyChannel is the PostgreSQL NOTIFY channel used by the library.
 const NotifyChannel = "pgxevents_event"

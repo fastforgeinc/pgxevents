@@ -1,4 +1,4 @@
--- pgxevents v0.1.0-scaffold
+-- pgxevents v1.0.0
 --
 -- Canonical install SQL. Include this in a golang-migrate migration, or
 -- rely on pgxevents.WithRuntimeInstall(true) to apply it at startup.
@@ -38,4 +38,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION pgxevents_notify_event() IS 'pgxevents v0.1.0-scaffold';
+COMMENT ON FUNCTION pgxevents_notify_event() IS 'pgxevents v1.0.0';
